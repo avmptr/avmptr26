@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Meisari Farm</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:      #2d6a2d;
+      --green-dark: #1e4d1e;
+      --green-soft: #e8f5e8;
+      --border:     #e0e0e0;
+      --text:       #222;
+      --muted:      #666;
+      --bg:         #f2f5f2;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--green);
+      color: #fff;
+      padding: 18px 20px 14px;
+      text-align: center;
+    }
+    header h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.02em; }
+    header p  { font-size: 0.78rem; opacity: 0.8; margin-top: 3px; }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      background: var(--green-dark);
+    }
+    .tab {
+      flex: 1;
+      padding: 11px 4px;
+      text-align: center;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.65);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+      user-select: none;
+    }
+    .tab.active { color: #fff; border-bottom-color: #fff; }
+
+    /* ── Cards ── */
+    .card {
+      background: #fff;
+      margin: 14px 14px 0;
+      border-radius: 12px;
+      padding: 18px 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    /* ── Form fields ── */
+    .field { margin-bottom: 18px; }
+    .field:last-child { margin-bottom: 0; }
+
+    label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 7px;
+    }
+
+    select, input[type="date"], textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: inherit;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+      -webkit-appearance: none;
+      transition: border-color 0.18s;
+    }
+    select:focus, input:focus, textarea:focus { border-color: var(--green); }
+    textarea { resize: none; }
+
+    /* ── Condition grid ── */
+    .cond-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .cond-btn {
+      padding: 13px 4px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #555;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .cond-btn.active {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+    }
+    .cond-btn:active { opacity: 0.8; }
+
+    .selected-pills {
+      margin-top: 10px;
+      min-height: 34px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      align-items: center;
+    }
+    .selected-pills em { font-size: 0.82rem; color: #aaa; }
+    .pill {
+      background: var(--green);
+      color: #fff;
+      border-radius: 5px;
+      padding: 3px 10px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    /* ── Submit button ── */
+    .btn-submit {
+      width: 100%;
+      padding: 16px;
+      margin-top: 4px;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-submit:active   { background: var(--green-dark); }
+    .btn-submit:disabled { background: #aaa; cursor: not-allowed; }
+
+    /* ── Recent list ── */
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+    }
+
+    .obs-item {
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .obs-item:last-child { border-bottom: none; }
+    .obs-tree  { font-weight: 700; color: var(--green); font-size: 0.95rem; }
+    .obs-codes { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; }
+    .badge {
+      background: var(--green-soft);
+      color: var(--green);
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .obs-meta { font-size: 0.72rem; color: #aaa; margin-top: 4px; }
+    .obs-notes { font-size: 0.82rem; color: #777; margin-top: 3px; font-style: italic; }
+
+    /* ── Stats ── */
+    .stats-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .stats-table th {
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0 0 10px;
+      border-bottom: 2px solid var(--border);
+    }
+    .stats-table td {
+      padding: 9px 0;
+      border-bottom: 1px solid #f0f0f0;
+      color: var(--text);
+    }
+    .stats-table tr:last-child td { border-bottom: none; }
+    .stats-table .num { font-weight: 700; color: var(--green); text-align: right; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120px);
+      background: #222;
+      color: #fff;
+      padding: 13px 22px;
+      border-radius: 10px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      transition: transform 0.28s ease;
+      z-index: 200;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .toast.show   { transform: translateX(-50%) translateY(0); }
+    .toast.ok     { background: var(--green); }
+    .toast.err    { background: #c0392b; }
+
+    /* ── Page sections ── */
+    .page { display: none; }
+    .page.active { display: block; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Meisari Avocado Farm</h1>
+  <p id="hdr-date"></p>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('entry')">Data Entry</div>
+  <div class="tab" onclick="switchTab('recent')">Recent</div>
+  <div class="tab" onclick="switchTab('stats')">Stats</div>
+</div>
+
+<!-- ══════════ ENTRY PAGE ══════════ -->
+<div id="page-entry" class="page active">
+  <div class="card">
+
+    <div class="field">
+      <label>Block</label>
+      <select id="block-sel" onchange="onBlockChange()">
+        <option value="">— Select Block —</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Tree ID</label>
+      <select id="tree-sel">
+        <option value="">— Select Block First —</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Condition Codes</label>
+      <div class="cond-grid" id="cond-grid"></div>
+      <div class="selected-pills" id="pills"><em>None selected</em></div>
+    </div>
+
+    <div class="field">
+      <label>Observation Date</label>
+      <input type="date" id="obs-date">
+    </div>
+
+    <div class="field">
+      <label>Notes (optional)</label>
+      <textarea id="notes" rows="2" placeholder="e.g. branch broken, discoloration on leaves…"></textarea>
+    </div>
+
+    <button class="btn-submit" onclick="submitObs()">Submit Observation</button>
+  </div>
+</div>
+
+<!-- ══════════ RECENT PAGE ══════════ -->
+<div id="page-recent" class="page">
+  <div class="card">
+    <div class="section-title">Last 20 Submissions</div>
+    <div id="recent-list"><em style="color:#aaa;font-size:.85rem">Loading…</em></div>
+  </div>
+</div>
+
+<!-- ══════════ STATS PAGE ══════════ -->
+<div id="page-stats" class="page">
+  <div class="card">
+    <div class="section-title">Trees & Observations per Block</div>
+    <div id="stats-body"><em style="color:#aaa;font-size:.85rem">Loading…</em></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── Config ── */
+const CONDITIONS = ["V1","V2","V3","G1","G2","G3","S","Stg","K","R","M","Sb"];
+let selected = new Set();
+
+/* ── Init ── */
+document.getElementById("obs-date").value = isoToday();
+document.getElementById("hdr-date").textContent =
+  new Date().toLocaleDateString("id-ID", {weekday:"long", year:"numeric", month:"long", day:"numeric"});
+
+buildCondGrid();
+fetchBlocks();
+
+/* ── Tab switching ── */
+function switchTab(name) {
+  document.querySelectorAll(".tab").forEach((t,i) => {
+    const pages = ["entry","recent","stats"];
+    t.classList.toggle("active", pages[i] === name);
+  });
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.getElementById("page-" + name).classList.add("active");
+  if (name === "recent") fetchRecent();
+  if (name === "stats")  fetchStats();
+}
+
+/* ── Condition buttons ── */
+function buildCondGrid() {
+  const grid = document.getElementById("cond-grid");
+  CONDITIONS.forEach(code => {
+    const btn = document.createElement("button");
+    btn.className = "cond-btn";
+    btn.textContent = code;
+    btn.addEventListener("click", () => toggleCond(code, btn));
+    grid.appendChild(btn);
+  });
+}
+
+function toggleCond(code, btn) {
+  selected.has(code) ? selected.delete(code) : selected.add(code);
+  btn.classList.toggle("active", selected.has(code));
+  renderPills();
+}
+
+function renderPills() {
+  const el = document.getElementById("pills");
+  if (selected.size === 0) {
+    el.innerHTML = "<em>None selected</em>";
+  } else {
+    el.innerHTML = [...selected].map(c => `<span class="pill">${c}</span>`).join("");
+  }
+}
+
+/* ── Block / Tree selects ── */
+async function fetchBlocks() {
+  const blocks = await apiFetch("/blocks");
+  const sel = document.getElementById("block-sel");
+  blocks.forEach(b => {
+    const opt = document.createElement("option");
+    opt.value = b;
+    opt.textContent = "Block " + b;
+    sel.appendChild(opt);
+  });
+}
+
+async function onBlockChange() {
+  const block = document.getElementById("block-sel").value;
+  const sel = document.getElementById("tree-sel");
+  sel.innerHTML = "<option value=''>Loading…</option>";
+
+  if (!block) {
+    sel.innerHTML = "<option value=''>— Select Block First —</option>";
+    return;
+  }
+
+  const trees = await apiFetch("/trees?block=" + encodeURIComponent(block));
+  sel.innerHTML = "<option value=''>— Select Tree —</option>";
+  trees.forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t.tree_code;
+    opt.textContent = t.tree_code;
+    sel.appendChild(opt);
+  });
+}
+
+/* ── Submit ── */
+async function submitObs() {
+  const block    = document.getElementById("block-sel").value;
+  const treeCode = document.getElementById("tree-sel").value;
+  const date     = document.getElementById("obs-date").value;
+  const notes    = document.getElementById("notes").value.trim();
+
+  if (!block)              return toast("Select a block", "err");
+  if (!treeCode)           return toast("Select a tree", "err");
+  if (selected.size === 0) return toast("Select at least one condition", "err");
+
+  const btn = document.querySelector(".btn-submit");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+
+  try {
+    await apiFetch("/observations", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        tree_code:   treeCode,
+        conditions:  [...selected],
+        notes:       notes || null,
+        observed_at: date,
+      }),
+    });
+    toast(`Saved: ${treeCode}`, "ok");
+    resetForm();
+  } catch (e) {
+    toast(e.message, "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Submit Observation";
+  }
+}
+
+function resetForm() {
+  document.getElementById("tree-sel").value = "";
+  document.getElementById("notes").value = "";
+  selected.clear();
+  document.querySelectorAll(".cond-btn").forEach(b => b.classList.remove("active"));
+  renderPills();
+}
+
+/* ── Recent ── */
+async function fetchRecent() {
+  const obs = await apiFetch("/observations?limit=20");
+  const el  = document.getElementById("recent-list");
+  if (!obs.length) {
+    el.innerHTML = "<em style='color:#aaa;font-size:.85rem'>No observations yet</em>";
+    return;
+  }
+  el.innerHTML = obs.map(o => `
+    <div class="obs-item">
+      <div class="obs-tree">${o.tree_code}</div>
+      <div class="obs-codes">${o.conditions.map(c => `<span class="badge">${c}</span>`).join("")}</div>
+      ${o.notes ? `<div class="obs-notes">${o.notes}</div>` : ""}
+      <div class="obs-meta">${o.observed_at} · submitted ${fmtTime(o.created_at)}</div>
+    </div>
+  `).join("");
+}
+
+/* ── Stats ── */
+async function fetchStats() {
+  const rows = await apiFetch("/stats");
+  const el   = document.getElementById("stats-body");
+  if (!rows.length) {
+    el.innerHTML = "<em style='color:#aaa;font-size:.85rem'>No data yet</em>";
+    return;
+  }
+  const totalTrees = rows.reduce((s,r) => s + r.trees, 0);
+  const totalObs   = rows.reduce((s,r) => s + r.observations, 0);
+  el.innerHTML = `
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th>Block</th>
+          <th class="num">Trees</th>
+          <th class="num">Obs.</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr>
+            <td>${r.block}</td>
+            <td class="num">${r.trees}</td>
+            <td class="num">${r.observations}</td>
+          </tr>
+        `).join("")}
+        <tr style="font-weight:700;border-top:2px solid var(--border)">
+          <td>Total</td>
+          <td class="num">${totalTrees}</td>
+          <td class="num">${totalObs}</td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+}
+
+/* ── Helpers ── */
+async function apiFetch(path, opts) {
+  const res = await fetch(path, opts);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+function toast(msg, type) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = "toast " + type + " show";
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.className = "toast"; }, 3000);
+}
+
+function isoToday() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function fmtTime(iso) {
+  try {
+    return new Date(iso + "Z").toLocaleTimeString("id-ID", {hour:"2-digit", minute:"2-digit"});
+  } catch { return iso; }
+}
+</script>
+</body>
+</html>

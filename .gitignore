@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.pyo
+farm.db
+.env
+.DS_Store
+.claude/
