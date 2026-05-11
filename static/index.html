@@ -296,6 +296,27 @@
     <div class="section-title">Trees & Observations per Block</div>
     <div id="stats-body"><em style="color:#aaa;font-size:.85rem">Loading…</em></div>
   </div>
+
+  <div class="card" style="margin-top:0">
+    <div class="section-title">Export to Excel</div>
+    <div class="field">
+      <label>Block (optional)</label>
+      <select id="exp-block">
+        <option value="">All Blocks</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px">
+      <div class="field" style="flex:1;margin-bottom:0">
+        <label>From</label>
+        <input type="date" id="exp-from">
+      </div>
+      <div class="field" style="flex:1;margin-bottom:0">
+        <label>To</label>
+        <input type="date" id="exp-to">
+      </div>
+    </div>
+    <button class="btn-submit" style="margin-top:16px" onclick="exportExcel()">Download Excel</button>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -322,7 +343,7 @@ function switchTab(name) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   document.getElementById("page-" + name).classList.add("active");
   if (name === "recent") fetchRecent();
-  if (name === "stats")  fetchStats();
+  if (name === "stats")  { fetchStats(); populateExportBlocks(); }
 }
 
 /* ── Condition buttons ── */
@@ -444,6 +465,37 @@ async function fetchRecent() {
       <div class="obs-meta">${o.observed_at} · submitted ${fmtTime(o.created_at)}</div>
     </div>
   `).join("");
+}
+
+/* ── Export ── */
+async function exportExcel() {
+  const block   = document.getElementById("exp-block").value;
+  const from    = document.getElementById("exp-from").value;
+  const to      = document.getElementById("exp-to").value;
+
+  const params = new URLSearchParams();
+  if (block) params.set("block", block);
+  if (from)  params.set("date_from", from);
+  if (to)    params.set("date_to", to);
+
+  const url = "/export?" + params.toString();
+  window.location.href = url;  // triggers file download
+}
+
+/* ── Populate export block dropdown when Stats tab opens ── */
+async function populateExportBlocks() {
+  const sel = document.getElementById("exp-block");
+  if (sel.options.length > 1) return;  // already populated
+  const blocks = await apiFetch("/blocks");
+  blocks.forEach(b => {
+    const opt = document.createElement("option");
+    opt.value = b;
+    opt.textContent = "Block " + b;
+    sel.appendChild(opt);
+  });
+  // default date range: start of this year → today
+  document.getElementById("exp-from").value = new Date().getFullYear() + "-01-01";
+  document.getElementById("exp-to").value   = isoToday();
 }
 
 /* ── Stats ── */

@@ -1,3 +1,4 @@
+import io
 import json
 import os
 from datetime import datetime
@@ -8,6 +9,7 @@ import psycopg2
 import psycopg2.extras
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -220,6 +222,144 @@ def stats():
         {"block": r["block"], "trees": r["tree_count"], "observations": obs_map.get(r["block"], 0)}
         for r in tree_rows
     ]
+
+
+@app.get("/export", summary="Download observations as Excel")
+def export_observations(
+    block: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None, description="YYYY-MM-DD"),
+    date_to: Optional[str] = Query(None, description="YYYY-MM-DD"),
+):
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    query = """
+        SELECT
+            o.observed_at,
+            o.tree_code,
+            o.block,
+            t.variety,
+            o.conditions,
+            o.notes,
+            o.created_at
+        FROM observations o
+        JOIN trees t ON t.tree_code = o.tree_code
+        WHERE 1=1
+    """
+    params: list = []
+    if block:
+        query += " AND o.block = %s"
+        params.append(block)
+    if date_from:
+        query += " AND o.observed_at >= %s"
+        params.append(date_from)
+    if date_to:
+        query += " AND o.observed_at <= %s"
+        params.append(date_to)
+    query += " ORDER BY o.observed_at DESC, o.created_at DESC"
+
+    cur.execute(query, params)
+    rows = cur.fetchall()
+    cur.close()
+
+    # Summary stats per block
+    cur2 = conn.cursor()
+    cur2.execute("""
+        SELECT
+            o.block,
+            COUNT(*) AS total_obs,
+            COUNT(DISTINCT o.tree_code) AS trees_observed
+        FROM observations o
+        WHERE 1=1
+    """ + (" AND o.block = %s" if block else "") +
+    (" AND o.observed_at >= %s" if date_from else "") +
+    (" AND o.observed_at <= %s" if date_to else "") +
+    " GROUP BY o.block ORDER BY o.block",
+    [p for p in [block, date_from, date_to] if p])
+    summary_rows = cur2.fetchall()
+    cur2.close()
+    conn.close()
+
+    wb = Workbook()
+
+    # ── Sheet 1: Observations ──────────────────────────────────────
+    ws = wb.active
+    ws.title = "Observations"
+
+    header_fill = PatternFill("solid", fgColor="2D6A2D")
+    header_font = Font(bold=True, color="FFFFFF")
+    headers = ["Date", "Tree Code", "Block", "Variety", "Conditions", "Notes", "Submitted At"]
+    col_widths = [12, 14, 8, 10, 30, 30, 20]
+
+    for col, (h, w) in enumerate(zip(headers, col_widths), 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center")
+        ws.column_dimensions[cell.column_letter].width = w
+
+    for row in rows:
+        conditions = json.loads(row["conditions"]) if isinstance(row["conditions"], str) else row["conditions"]
+        created_at = row["created_at"].isoformat() if hasattr(row["created_at"], "isoformat") else str(row["created_at"])
+        ws.append([
+            row["observed_at"],
+            row["tree_code"],
+            row["block"],
+            row["variety"],
+            ", ".join(conditions),
+            row["notes"] or "",
+            created_at,
+        ])
+
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = f"A1:G{len(rows) + 1}"
+
+    # ── Sheet 2: Summary ───────────────────────────────────────────
+    ws2 = wb.create_sheet("Summary")
+    ws2.column_dimensions["A"].width = 10
+    ws2.column_dimensions["B"].width = 18
+    ws2.column_dimensions["C"].width = 18
+
+    sum_headers = ["Block", "Total Observations", "Trees Observed"]
+    for col, h in enumerate(sum_headers, 1):
+        cell = ws2.cell(row=1, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center")
+
+    for row in summary_rows:
+        ws2.append([row["block"], row["total_obs"], row["trees_observed"]])
+
+    # Condition code breakdown
+    ws2.cell(row=len(summary_rows) + 3, column=1, value="Condition Code Legend").font = Font(bold=True)
+    legend = [
+        ("V1", "Umur 0–1 bulan"),     ("V2", "Umur 1–12 bulan"),    ("V3", "Umur >12 bulan"),
+        ("G1", "Berbunga"),            ("G2", "Buah kecil/muda"),     ("G3", "Buah dewasa/panen"),
+        ("S",  "Sakit"),               ("Stg","Stagnan"),             ("K",  "Kritis"),
+        ("R",  "Recovery"),            ("M",  "Mati"),                ("Sb", "Substitusi"),
+    ]
+    for i, (code, desc) in enumerate(legend):
+        r = len(summary_rows) + 4 + i
+        ws2.cell(row=r, column=1, value=code).font = Font(bold=True)
+        ws2.cell(row=r, column=2, value=desc)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    date_str = datetime.now().strftime("%Y%m%d")
+    filename = f"meisari_farm_{date_str}.xlsx"
+    if block:
+        filename = f"meisari_farm_blok{block}_{date_str}.xlsx"
+
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 @app.get("/health")
