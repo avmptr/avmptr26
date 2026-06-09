@@ -185,6 +185,19 @@
     .obs-meta { font-size: 0.72rem; color: #aaa; margin-top: 4px; }
     .obs-notes { font-size: 0.82rem; color: #777; margin-top: 3px; font-style: italic; }
 
+    .btn-delete {
+      margin-top: 6px;
+      padding: 5px 12px;
+      background: none;
+      border: 1px solid #e0b0b0;
+      border-radius: 6px;
+      color: #c0392b;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-delete:active { background: #fdf0f0; }
+
     /* ── Stats ── */
     .stats-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
     .stats-table th {
@@ -458,11 +471,12 @@ async function fetchRecent() {
     return;
   }
   el.innerHTML = obs.map(o => `
-    <div class="obs-item">
+    <div class="obs-item" id="obs-${o.id}">
       <div class="obs-tree">${o.tree_code}</div>
       <div class="obs-codes">${o.conditions.map(c => `<span class="badge">${c}</span>`).join("")}</div>
       ${o.notes ? `<div class="obs-notes">${o.notes}</div>` : ""}
       <div class="obs-meta">${o.observed_at} · submitted ${fmtTime(o.created_at)}</div>
+      <button class="btn-delete" onclick="deleteObs(${o.id})">Delete</button>
     </div>
   `).join("");
 }
@@ -496,6 +510,18 @@ async function populateExportBlocks() {
   // default date range: start of this year → today
   document.getElementById("exp-from").value = new Date().getFullYear() + "-01-01";
   document.getElementById("exp-to").value   = isoToday();
+}
+
+/* ── Delete ── */
+async function deleteObs(id) {
+  if (!confirm("Delete this observation?")) return;
+  try {
+    await apiFetch(`/observations/${id}`, { method: "DELETE" });
+    document.getElementById(`obs-${id}`).remove();
+    toast("Deleted", "ok");
+  } catch (e) {
+    toast(e.message, "err");
+  }
 }
 
 /* ── Stats ── */

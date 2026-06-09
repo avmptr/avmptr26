@@ -207,6 +207,20 @@ def list_observations(
     return [row_to_dict(r) for r in rows]
 
 
+@app.delete("/observations/{obs_id}", status_code=200)
+def delete_observation(obs_id: int):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM observations WHERE id = %s", (obs_id,))
+    if not cur.fetchone():
+        cur.close(); conn.close()
+        raise HTTPException(404, f"Observation {obs_id} not found")
+    cur.execute("DELETE FROM observations WHERE id = %s", (obs_id,))
+    conn.commit()
+    cur.close(); conn.close()
+    return {"deleted": obs_id}
+
+
 @app.get("/stats")
 def stats():
     conn = get_db()
